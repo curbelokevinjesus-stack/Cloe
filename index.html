@@ -686,7 +686,7 @@ async function processCommand(text) {
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':'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','anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json','x-api-key':'TU_NUEVA_CLAVE','anthropic-version':'2023-06-01'},
       body:JSON.stringify({
         model:'claude-sonnet-4-20250514',
         max_tokens:1000,
