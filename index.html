@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JARVIS">
+<meta name="theme-color" content="#020b18">
+<title>J·A·R·V·I·S</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   JARVIS — MOBILE FIRST UI
+   Optimizado para pantallas táctiles
+═══════════════════════════════════════════ */
+:root {
+  --bg: #020b18;
+  --core: #00d4ff;
+  --glow: #00aaff;
+  --ring: #0055cc;
+  --accent: #00ffe7;
+  --warm: #ffe066;
+  --text: #b8e4ff;
+  --dim: #1e4060;
+  --danger: #ff3c6e;
+  --success: #00ffb2;
+  --safe: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { width:100%; height:100%; overflow:hidden; background:var(--bg); }
+
+body {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100dvh;
+  background:
+    radial-gradient(ellipse 100% 50% at 50% 0%, #001833 0%, transparent 65%),
+    radial-gradient(ellipse 80% 40% at 50% 100%, #000d1a 0%, transparent 70%),
+    var(--bg);
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+}
+
+/* Scanline overlay */
+body::before {
+  content:'';
+  position:fixed; inset:0; z-index:100; pointer-events:none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,212,255,0.015) 2px,
+    rgba(0,212,255,0.015) 4px
+  );
+}
+/* Grid */
+body::after {
+  content:'';
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,150,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,150,255,0.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* ── Layout ── */
+#app {
+  position: relative; z-index:1;
+  width: 100%; max-width: 430px;
+  height: 100dvh;
+  display: flex; flex-direction: column;
+  align-items: center;
+  padding: 0 16px;
+  padding-bottom: calc(16px + var(--safe));
+}
+
+/* ── Header ── */
+.hdr {
+  width: 100%;
+  padding: 14px 0 6px;
+  display: flex; flex-direction: column; align-items: center;
+  flex-shrink: 0;
+}
+.hdr-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+}
+.hdr-line {
+  flex:1; height:1px;
+  background: linear-gradient(90deg, transparent, var(--ring), transparent);
+}
+.hdr-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(16px, 5vw, 22px);
+  font-weight: 900;
+  letter-spacing: .45em;
+  color: var(--core);
+  text-shadow: 0 0 18px rgba(0,212,255,.7);
+}
+.hdr-sub {
+  font-size: 8px; letter-spacing: .22em;
+  color: var(--dim); margin-top: 4px;
+}
+
+/* ── Stats ── */
+.stats {
+  display: flex; width: 100%;
+  background: rgba(0,15,35,.7);
+  border: 1px solid rgba(0,80,150,.5);
+  border-radius: 6px;
+  padding: 8px 0;
+  margin: 10px 0;
+  flex-shrink: 0;
+}
+.stat {
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; gap:2px;
+}
+.stat + .stat { border-left: 1px solid var(--dim); }
+.stat-l { font-size:8px; letter-spacing:.2em; color:var(--dim); }
+.stat-v { font-size:13px; color:var(--core); font-weight:600; }
+
+/* ── Reactor ── */
+.reactor-wrap {
+  flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  width: 100%;
+  min-height: 0;
+}
+
+.arc-container {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+
+#arc-svg {
+  width: min(62vw, 260px);
+  height: min(62vw, 260px);
+  filter: drop-shadow(0 0 22px rgba(0,170,255,.5));
+  transition: filter .3s;
+}
+
+/* State filters */
+body.listening #arc-svg  { filter: drop-shadow(0 0 30px rgba(0,255,231,.6)); }
+body.processing #arc-svg { filter: drop-shadow(0 0 26px rgba(255,224,102,.5)); }
+body.responding #arc-svg { filter: drop-shadow(0 0 30px rgba(0,255,178,.55)); }
+body.error #arc-svg      { filter: drop-shadow(0 0 26px rgba(255,60,110,.55)); }
+
+/* Orbits */
+.orbit {
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+}
+.orbit-1 {
+  width: min(80vw, 330px);
+  height: min(80vw, 330px);
+  animation: orb-spin 9s linear infinite;
+}
+.orbit-2 {
+  width: min(90vw, 375px);
+  height: min(90vw, 375px);
+  animation: orb-spin 14s linear infinite reverse;
+}
+.orbit-dot {
+  position:absolute; top:0; left:50%;
+  width:7px; height:7px; border-radius:50%;
+  margin-left:-3.5px; margin-top:-3.5px;
+  background:var(--core);
+  box-shadow:0 0 10px var(--core);
+}
+.orbit-2 .orbit-dot {
+  width:5px; height:5px;
+  background:var(--accent);
+  box-shadow:0 0 8px var(--accent);
+  margin-left:-2.5px; margin-top:-2.5px;
+}
+@keyframes orb-spin { to { transform:rotate(360deg); } }
+
+/* Ring animations */
+.ring-cw  { transform-origin:100px 100px; animation:rcw  7s linear infinite; }
+.ring-ccw { transform-origin:100px 100px; animation:rccw 10s linear infinite; }
+.ring-scw { transform-origin:100px 100px; animation:rcw  22s linear infinite; }
+.hex      { transform-origin:100px 100px; animation:rccw 16s linear infinite; }
+@keyframes rcw  { to{transform:rotate(360deg)}  }
+@keyframes rccw { to{transform:rotate(-360deg)} }
+
+.core-pulse { animation: cpulse 2s ease-in-out infinite; }
+@keyframes cpulse { 0%,100%{opacity:1} 50%{opacity:.65} }
+
+body.listening  .core-pulse { animation:cpulse-fast .5s ease-in-out infinite; }
+body.processing .core-pulse { animation:cspin 1.2s linear infinite; }
+body.responding .core-pulse { animation:cpulse .9s ease-in-out infinite; }
+@keyframes cpulse-fast { 0%,100%{opacity:1;transform:scale(1.04)} 50%{opacity:.7;transform:scale(.97)} }
+@keyframes cspin { to{transform:rotate(360deg)} }
+
+/* ── Wave ── */
+.wave {
+  display:flex; align-items:center; gap:3px;
+  height:36px; flex-shrink:0; margin:6px 0;
+}
+.wb {
+  width:3px; border-radius:2px;
+  background:var(--ring);
+  height:5px; opacity:.35;
+  transition:background .3s, opacity .3s;
+}
+body.listening .wb {
+  background: linear-gradient(to top, var(--ring), var(--accent));
+  opacity:.85;
+  animation:wv ease-in-out infinite;
+}
+@keyframes wv { 0%,100%{height:5px} 50%{height:28px} }
+
+/* ── Status ── */
+.status-box {
+  width:100%; min-height:70px;
+  display:flex; flex-direction:column;
+  align-items:center; gap:8px;
+  text-align:center;
+  flex-shrink:0;
+  padding: 0 8px;
+}
+.status-label {
+  font-family:'Orbitron',sans-serif;
+  font-size:11px; letter-spacing:.45em;
+  transition:color .3s;
+  color: var(--dim);
+}
+body.listening  .status-label { color:var(--accent); }
+body.processing .status-label { color:var(--warm); }
+body.responding .status-label { color:var(--success); }
+body.error      .status-label { color:var(--danger); }
+
+.transcript-box {
+  font-size:13px; color:#7ab8d8;
+  line-height:1.5; max-width:340px;
+  display:none;
+}
+.transcript-box.show { display:block; }
+
+.response-box {
+  font-size:13px; color:var(--text);
+  line-height:1.65; max-width:340px;
+  background:rgba(0,40,70,.45);
+  border-left:2px solid var(--core);
+  border-radius:3px;
+  padding:10px 14px;
+  text-align:left;
+  display:none;
+}
+.response-box.show { display:block; }
+
+/* ── Main Button ── */
+.main-btn {
+  width: min(88vw, 340px);
+  padding: 18px 24px;
+  border-radius: 60px;
+  border: 1.5px solid var(--ring);
+  background: rgba(0,15,35,.85);
+  color: var(--core);
+  display: flex; flex-direction: column;
+  align-items: center; gap: 5px;
+  cursor: pointer;
+  transition: all .15s;
+  flex-shrink: 0;
+  margin: 10px 0 8px;
+  outline:none;
+  -webkit-user-select:none; user-select:none;
+}
+.main-btn:active,
+.main-btn.held {
+  background: rgba(0,212,255,.12);
+  border-color: var(--accent);
+  box-shadow: 0 0 28px rgba(0,255,231,.3);
+  transform: scale(.97);
+}
+.main-btn:disabled { opacity:.45; }
+.btn-icon { font-size:26px; line-height:1; }
+.btn-txt  { font-size:9px; letter-spacing:.22em; }
+
+body.listening  .btn-icon { color:var(--accent); animation:blink .6s infinite; }
+body.processing .btn-icon { color:var(--warm); animation:spin .9s linear infinite; display:inline-block; }
+body.responding .btn-icon { color:var(--success); }
+body.error      .btn-icon { color:var(--danger); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+@keyframes spin   { to{transform:rotate(360deg)} }
+
+/* ── Quick commands ── */
+.quick {
+  display:flex; flex-wrap:wrap; gap:8px;
+  justify-content:center;
+  width:100%; flex-shrink:0;
+  padding-bottom:4px;
+}
+.qbtn {
+  font-family:'Share Tech Mono',monospace;
+  font-size:10px; letter-spacing:.04em;
+  padding:7px 14px;
+  background:rgba(0,40,70,.5);
+  border:1px solid var(--dim);
+  border-radius:4px;
+  color:#6aa8c8;
+  cursor:pointer;
+  transition:all .15s;
+  outline:none;
+}
+.qbtn:active { border-color:var(--core); color:var(--core); background:rgba(0,100,160,.2); }
+
+/* ── Corner brackets ── */
+.corner { position:fixed; pointer-events:none; z-index:2; }
+.corner-tl { top:10px; left:10px; }
+.corner-tr { top:10px; right:10px; }
+.corner-bl { bottom:10px; left:10px; }
+.corner-br { bottom:10px; right:10px; }
+.corner svg line { stroke:var(--glow); stroke-width:1.5; stroke-opacity:.45; }
+
+/* ── Footer ── */
+.footer {
+  font-size:7.5px; letter-spacing:.25em;
+  color:rgba(30,64,96,.8);
+  flex-shrink:0; padding:4px 0;
+}
+
+/* ── Install Banner ── */
+#install-banner {
+  display:none;
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:rgba(0,15,35,.97);
+  border-top:1px solid var(--ring);
+  padding:14px 20px calc(14px + var(--safe));
+  flex-direction:column; gap:10px;
+}
+#install-banner.show { display:flex; }
+.banner-row { display:flex; align-items:center; justify-content:space-between; }
+.banner-txt { font-size:13px; color:var(--text); }
+.banner-txt span { color:var(--core); font-weight:700; }
+.banner-btns { display:flex; gap:10px; }
+.b-install {
+  padding:8px 20px; border-radius:30px;
+  background:var(--core); color:var(--bg);
+  font-family:'Orbitron',sans-serif;
+  font-size:11px; font-weight:700;
+  border:none; cursor:pointer;
+}
+.b-dismiss {
+  padding:8px 16px; border-radius:30px;
+  background:transparent; color:var(--dim);
+  font-size:11px; border:1px solid var(--dim);
+  cursor:pointer;
+}
+
+/* ── iOS install guide ── */
+#ios-guide {
+  display:none;
+  position:fixed; inset:0; z-index:300;
+  background:rgba(2,11,24,.96);
+  flex-direction:column; align-items:center;
+  justify-content:center; padding:30px 24px;
+  gap:20px;
+}
+#ios-guide.show { display:flex; }
+.guide-title {
+  font-family:'Orbitron',sans-serif;
+  font-size:16px; color:var(--core);
+  letter-spacing:.2em;
+}
+.guide-step {
+  display:flex; gap:14px; align-items:flex-start;
+  background:rgba(0,30,60,.6);
+  border:1px solid var(--dim);
+  border-radius:8px;
+  padding:14px 16px;
+  width:100%; max-width:360px;
+}
+.step-num {
+  font-family:'Orbitron',sans-serif;
+  font-size:20px; color:var(--core);
+  min-width:28px;
+}
+.step-txt { font-size:13px; line-height:1.6; color:var(--text); }
+.step-txt strong { color:var(--accent); }
+.guide-close {
+  margin-top:10px; padding:12px 36px;
+  border-radius:30px; border:1.5px solid var(--ring);
+  background:transparent; color:var(--core);
+  font-family:'Orbitron',sans-serif; font-size:12px;
+  cursor:pointer;
+}
+</style>
+</head>
+<body id="body-el">
+
+<!-- Corner decorations -->
+<div class="corner corner-tl"><svg width="28" height="28"><line x1="0" y1="20" x2="0" y2="0"/><line x1="0" y1="0" x2="20" y2="0"/></svg></div>
+<div class="corner corner-tr"><svg width="28" height="28"><line x1="8" y1="0" x2="28" y2="0"/><line x1="28" y1="0" x2="28" y2="20"/></svg></div>
+<div class="corner corner-bl"><svg width="28" height="28"><line x1="0" y1="8" x2="0" y2="28"/><line x1="0" y1="28" x2="20" y2="28"/></svg></div>
+<div class="corner corner-br"><svg width="28" height="28"><line x1="8" y1="28" x2="28" y2="28"/><line x1="28" y1="8" x2="28" y2="28"/></svg></div>
+
+<div id="app">
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-row">
+      <div class="hdr-line"></div>
+      <span class="hdr-title">J·A·R·V·I·S</span>
+      <div class="hdr-line"></div>
+    </div>
+    <div class="hdr-sub">JUST A RATHER VERY INTELLIGENT SYSTEM</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat"><span class="stat-l">ESTADO</span><span class="stat-v" id="sys-state">ONLINE</span></div>
+    <div class="stat"><span class="stat-l">BATERÍA</span><span class="stat-v" id="sys-bat">--%</span></div>
+    <div class="stat"><span class="stat-l">TIEMPO</span><span class="stat-v" id="sys-time">--:--</span></div>
+  </div>
+
+  <!-- Reactor -->
+  <div class="reactor-wrap">
+    <div class="arc-container">
+      <!-- Orbit rings -->
+      <div class="orbit orbit-1"><div class="orbit-dot"></div></div>
+      <div class="orbit orbit-2"><div class="orbit-dot"></div></div>
+
+      <svg id="arc-svg" viewBox="0 0 200 200">
+        <defs>
+          <filter id="gcore"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <filter id="gsoft"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <radialGradient id="cg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#00d4ff" id="cg-stop"/>
+            <stop offset="60%" stop-color="#0055cc" stop-opacity=".8"/>
+            <stop offset="100%" stop-color="#001a66" stop-opacity=".2"/>
+          </radialGradient>
+          <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#001a33"/>
+            <stop offset="100%" stop-color="#010810"/>
+          </radialGradient>
+        </defs>
+
+        <!-- Outer dashed ring -->
+        <circle cx="100" cy="100" r="95" fill="none" stroke="#1e4060" stroke-width=".5" stroke-dasharray="4 6" class="ring-scw"/>
+
+        <!-- Segment rings -->
+        <circle cx="100" cy="100" r="88" fill="none" stroke="#0055cc" stroke-width="1.5" stroke-opacity=".5" stroke-dasharray="6 4" class="ring-cw"/>
+        <circle cx="100" cy="100" r="76" fill="none" stroke="#0077ff" stroke-width="1" stroke-opacity=".4" stroke-dasharray="3 7" class="ring-ccw"/>
+        <circle cx="100" cy="100" r="64" fill="none" stroke="#003aff" stroke-width="1" stroke-opacity=".3" stroke-dasharray="6 4" class="ring-cw"/>
+
+        <!-- Spoke lines -->
+        <line x1="100" y1="45" x2="100" y2="28" stroke="#00aaff" stroke-width="1.5" stroke-opacity=".7" filter="url(#gsoft)" class="ring-cw" style="transform-origin:100px 100px"/>
+        <line x1="155" y1="77" x2="168" y2="70" stroke="#00aaff" stroke-width="1.5" stroke-opacity=".7" filter="url(#gsoft)" class="ring-cw" style="transform-origin:100px 100px"/>
+        <line x1="155" y1="123" x2="168" y2="130" stroke="#00aaff" stroke-width="1.5" stroke-opacity=".7" filter="url(#gsoft)" class="ring-cw" style="transform-origin:100px 100px"/>
+        <line x1="100" y1="155" x2="100" y2="172" stroke="#00aaff" stroke-width="1.5" stroke-opacity=".7" filter="url(#gsoft)" class="ring-cw" style="transform-origin:100px 100px"/>
+        <line x1="45" y1="123" x2="32" y2="130" stroke="#00aaff" stroke-width="1.5" stroke-opacity=".7" filter="url(#gsoft)" class="ring-cw" style="transform-origin:100px 100px"/>
+        <line x1="45" y1="77" x2="32" y2="70" stroke="#00aaff" stroke-width="1.5" stroke-opacity=".7" filter="url(#gsoft)" class="ring-cw" style="transform-origin:100px 100px"/>
+
+        <!-- Hexagon -->
+        <polygon points="100,48 148,74 148,126 100,152 52,126 52,74" fill="none" stroke="#0055cc" stroke-width="1" stroke-opacity=".55" filter="url(#gsoft)" class="hex"/>
+
+        <!-- Inner disc -->
+        <circle cx="100" cy="100" r="44" fill="url(#bg)"/>
+
+        <!-- Glow ring -->
+        <circle cx="100" cy="100" r="38" fill="none" stroke="#00d4ff" stroke-width="2" stroke-opacity=".85" filter="url(#gcore)" class="core-pulse" id="glow-ring"/>
+
+        <!-- Core -->
+        <circle cx="100" cy="100" r="28" fill="url(#cg)" filter="url(#gcore)" class="core-pulse"/>
+
+        <!-- Center -->
+        <circle cx="100" cy="100" r="11" fill="#00d4ff" opacity=".95" filter="url(#gcore)" id="core-center"/>
+
+        <!-- Tick marks -->
+        <g id="ticks"></g>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Wave visualizer -->
+  <div class="wave" id="wave"></div>
+
+  <!-- Status display -->
+  <div class="status-box">
+    <div class="status-label" id="status-lbl">STANDBY</div>
+    <div class="transcript-box" id="transcript"></div>
+    <div class="response-box" id="response"></div>
+  </div>
+
+  <!-- Main button -->
+  <button class="main-btn" id="main-btn"
+    ontouchstart="handleTouchStart(event)"
+    ontouchend="handleTouchEnd(event)"
+    onmousedown="handleTouchStart(event)"
+    onmouseup="handleTouchEnd(event)">
+    <span class="btn-icon" id="btn-icon">◉</span>
+    <span class="btn-txt" id="btn-txt">MANTÉN PARA HABLAR</span>
+  </button>
+
+  <!-- Quick commands -->
+  <div class="quick">
+    <button class="qbtn" onclick="quickCmd('¿Qué hora es?')">¿Qué hora es?</button>
+    <button class="qbtn" onclick="quickCmd('¿Cuánta batería tengo?')">Batería</button>
+    <button class="qbtn" onclick="quickCmd('Cuéntame algo interesante')">Dato curioso</button>
+    <button class="qbtn" onclick="quickCmd('¿Cómo está el clima hoy?')">Clima</button>
+  </div>
+
+  <div class="footer">STARK INDUSTRIES · MARK XLVII · BUILD 2026.04</div>
+</div>
+
+<!-- Install banner (Android PWA) -->
+<div id="install-banner">
+  <div class="banner-row">
+    <div class="banner-txt">Instala <span>JARVIS</span> en tu dispositivo</div>
+  </div>
+  <div class="banner-btns">
+    <button class="b-install" id="btn-install">⬇ INSTALAR APP</button>
+    <button class="b-dismiss" onclick="document.getElementById('install-banner').classList.remove('show')">No ahora</button>
+  </div>
+</div>
+
+<!-- iOS install guide -->
+<div id="ios-guide">
+  <div class="guide-title">INSTALAR EN iOS</div>
+  <div class="guide-step">
+    <span class="step-num">1</span>
+    <span class="step-txt">Toca el botón <strong>Compartir</strong> (⬆) en la barra inferior de Safari</span>
+  </div>
+  <div class="guide-step">
+    <span class="step-num">2</span>
+    <span class="step-txt">Desplázate y selecciona <strong>"Agregar a pantalla de inicio"</strong></span>
+  </div>
+  <div class="guide-step">
+    <span class="step-num">3</span>
+    <span class="step-txt">Toca <strong>Agregar</strong> — JARVIS aparecerá como app nativa en tu pantalla</span>
+  </div>
+  <button class="guide-close" onclick="document.getElementById('ios-guide').classList.remove('show')">ENTENDIDO</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  JARVIS CORE ENGINE
+// ═══════════════════════════════════════════
+
+const STATE = { IDLE:'idle', LISTENING:'listening', PROCESSING:'processing', RESPONDING:'responding', ERROR:'error' };
+let currentState = STATE.IDLE;
+let recognition = null;
+let currentTranscript = '';
+let battery = null;
+let deferredPrompt = null;
+
+// ── Build tick marks ──────────────────────
+const tickG = document.getElementById('ticks');
+for (let i = 0; i < 24; i++) {
+  const a = (i * 15 * Math.PI) / 180;
+  const r1 = i % 6 === 0 ? 80 : i % 2 === 0 ? 82 : 84;
+  const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1', 100 + r1 * Math.cos(a));
+  line.setAttribute('y1', 100 + r1 * Math.sin(a));
+  line.setAttribute('x2', 100 + 87 * Math.cos(a));
+  line.setAttribute('y2', 100 + 87 * Math.sin(a));
+  line.setAttribute('stroke','#b8e4ff');
+  line.setAttribute('stroke-width', i % 6 === 0 ? '1.5' : '0.7');
+  line.setAttribute('stroke-opacity', i % 6 === 0 ? '0.7' : '0.25');
+  tickG.appendChild(line);
+}
+
+// ── Build wave bars ───────────────────────
+const waveEl = document.getElementById('wave');
+for (let i = 0; i < 30; i++) {
+  const d = document.createElement('div');
+  d.className = 'wb';
+  d.style.animationDelay = `${(i * 43) % 700}ms`;
+  d.style.animationDuration = `${380 + (i * 41) % 380}ms`;
+  waveEl.appendChild(d);
+}
+
+// ── Clock ─────────────────────────────────
+function tick() {
+  document.getElementById('sys-time').textContent =
+    new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+}
+tick(); setInterval(tick, 1000);
+
+// ── Battery ───────────────────────────────
+if ('getBattery' in navigator) {
+  navigator.getBattery().then(b => {
+    battery = Math.round(b.level * 100);
+    document.getElementById('sys-bat').textContent = battery + '%';
+    b.addEventListener('levelchange', () => {
+      battery = Math.round(b.level * 100);
+      document.getElementById('sys-bat').textContent = battery + '%';
+    });
+  });
+}
+
+// ── State manager ─────────────────────────
+const stateConfig = {
+  idle:       { label:'STANDBY',      icon:'◉', txt:'MANTÉN PARA HABLAR', sys:'ONLINE' },
+  listening:  { label:'ESCUCHANDO...', icon:'◎', txt:'SUELTA PARA PROCESAR', sys:'AUDIO ON' },
+  processing: { label:'PROCESANDO',   icon:'◌', txt:'UN MOMENTO...', sys:'IA ACTIVA' },
+  responding: { label:'RESPONDIENDO', icon:'▶', txt:'REPRODUCIENDO...', sys:'TTS ON' },
+  error:      { label:'ERROR',        icon:'✕', txt:'TOCA PARA REINTENTAR', sys:'FALLO' },
+};
+
+function setState(s, transcriptTxt, responseTxt) {
+  currentState = s;
+  const body = document.getElementById('body-el');
+  body.className = s;
+
+  const cfg = stateConfig[s];
+  document.getElementById('status-lbl').textContent = cfg.label;
+  document.getElementById('btn-icon').textContent   = cfg.icon;
+  document.getElementById('btn-txt').textContent    = cfg.txt;
+  document.getElementById('sys-state').textContent  = cfg.sys;
+
+  const tEl = document.getElementById('transcript');
+  const rEl = document.getElementById('response');
+
+  if (transcriptTxt !== undefined) {
+    tEl.textContent = '◎ ' + transcriptTxt;
+    tEl.classList.toggle('show', !!transcriptTxt);
+  }
+  if (responseTxt !== undefined) {
+    rEl.textContent = responseTxt;
+    rEl.classList.toggle('show', !!responseTxt);
+  }
+
+  // Update core color based on state
+  const colors = { idle:'#00d4ff', listening:'#00ffe7', processing:'#ffe066', responding:'#00ffb2', error:'#ff3c6e' };
+  document.getElementById('core-center').setAttribute('fill', colors[s]);
+  document.getElementById('glow-ring').setAttribute('stroke', colors[s]);
+
+  const btn = document.getElementById('main-btn');
+  btn.disabled = (s === STATE.PROCESSING || s === STATE.RESPONDING);
+}
+
+// ── Speech Recognition ────────────────────
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR();
+  r.lang = 'es-ES';
+  r.interimResults = true;
+  r.maxAlternatives = 1;
+  r.onresult = e => {
+    currentTranscript = Array.from(e.results).map(r=>r[0].transcript).join('');
+    setState(STATE.LISTENING, currentTranscript);
+  };
+  r.onend = () => {
+    if (currentTranscript.trim()) processCommand(currentTranscript.trim());
+    else setState(STATE.IDLE, '', '');
+  };
+  r.onerror = () => {
+    setState(STATE.ERROR);
+    setTimeout(()=>setState(STATE.IDLE,'',''), 2500);
+  };
+  return r;
+}
+
+// ── TTS ───────────────────────────────────
+function speak(text) {
+  if (!window.speechSynthesis) { setState(STATE.IDLE); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'es-ES'; u.rate = 0.88; u.pitch = 0.7; u.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(v=>v.lang.startsWith('es')&&(v.name.toLowerCase().includes('jorge')||v.name.toLowerCase().includes('diego')||v.name.toLowerCase().includes('male')))
+         || voices.find(v=>v.lang.startsWith('es'))
+         || voices[0];
+  if (v) u.voice = v;
+  u.onend = () => { setState(STATE.IDLE); setTimeout(()=>{document.getElementById('response').classList.remove('show');},6000); };
+  u.onerror = () => setState(STATE.IDLE);
+  setState(STATE.RESPONDING);
+  window.speechSynthesis.speak(u);
+}
+
+// ── Claude API ────────────────────────────
+async function processCommand(text) {
+  setState(STATE.PROCESSING, text);
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':'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','anthropic-version':'2023-06-01'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`Eres JARVIS, un asistente de IA avanzado. Responde SIEMPRE en español.
+Eres preciso, elegante, ligeramente formal. Máximo 2-3 oraciones.
+Usa frases como "Confirmado", "Procesando", "Entendido, señor" ocasionalmente.
+Hora actual: ${new Date().toLocaleTimeString('es-ES')}.
+Fecha: ${new Date().toLocaleDateString('es-ES')}.
+Batería del dispositivo: ${battery ?? 'desconocida'}%.`,
+        messages:[{role:'user',content:text}]
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'No pude procesar esa solicitud.';
+    setState(STATE.PROCESSING, text, reply);
+    speak(reply);
+  } catch(e) {
+    // Fallback sin API key
+    const fallbacks = {
+      'hora': `Son las ${new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}. Todo en orden, señor.`,
+      'batería': battery ? `Batería al ${battery}%. ${battery > 50 ? 'Niveles óptimos.' : 'Recomiendo conectar el cargador pronto.'}` : 'No puedo acceder al sensor de batería en este momento.',
+      'default': 'Conéctame a la API de Claude para activar mis capacidades completas, señor.'
+    };
+    const key = text.toLowerCase().includes('hora') ? 'hora' : text.toLowerCase().includes('bater') ? 'batería' : 'default';
+    const reply = fallbacks[key];
+    setState(STATE.PROCESSING, text, reply);
+    speak(reply);
+  }
+}
+
+function quickCmd(cmd) {
+  if (currentState !== STATE.IDLE) return;
+  currentTranscript = cmd;
+  processCommand(cmd);
+}
+
+// ── Touch handlers ────────────────────────
+let holdTimer = null;
+function handleTouchStart(e) {
+  e.preventDefault();
+  if (currentState !== STATE.IDLE) return;
+  document.getElementById('main-btn').classList.add('held');
+  // Haptic feedback (mobile)
+  if (navigator.vibrate) navigator.vibrate(40);
+  setState(STATE.LISTENING, '');
+  currentTranscript = '';
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    setState(STATE.ERROR);
+    document.getElementById('response').textContent = 'Tu navegador no soporta reconocimiento de voz. Usa Chrome.';
+    document.getElementById('response').classList.add('show');
+    setTimeout(()=>setState(STATE.IDLE,'',''), 3000);
+    return;
+  }
+  recognition = setupRecognition();
+  recognition?.start();
+}
+
+function handleTouchEnd(e) {
+  e.preventDefault();
+  document.getElementById('main-btn').classList.remove('held');
+  recognition?.stop();
+}
+
+// ── PWA Install ───────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+document.getElementById('btn-install')?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// iOS detection for install guide
+function isIOS() { return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
+function isInStandaloneMode() { return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches; }
+
+if (isIOS() && !isInStandaloneMode()) {
+  setTimeout(() => document.getElementById('ios-guide').classList.add('show'), 1500);
+}
+
+// Load voices
+window.speechSynthesis?.addEventListener('voiceschanged', () => window.speechSynthesis.getVoices());
+
+// Init
+setState(STATE.IDLE);
+</script>
+</body>
+</html>
